@@ -64,10 +64,37 @@
       overflow:hidden;
     }
 
+    .pet-zone{
+      width:180px;
+      height:78px;
+      position:relative;
+      margin-bottom:8px;
+    }
+
+    .pet-walker{
+      position:absolute;
+      left:50%;
+      bottom:0;
+      transform:translateX(-50%);
+    }
+
+    .pet-bob{
+      animation:bob 1.2s infinite steps(2);
+    }
+
     .knight{
       font-size:58px;
-      margin-bottom:10px;
-      animation:bob 1.2s infinite steps(2);
+      line-height:1;
+      display:block;
+      transform-origin:center center;
+    }
+
+    .pet-walker.right .knight{
+      transform:scaleX(-1);
+    }
+
+    .pet-walker.left .knight{
+      transform:scaleX(1);
     }
 
     @keyframes bob{
@@ -267,6 +294,11 @@ let todayIndex=getTradingDayIndex();
 let weekKey=getWeekKey();
 let state=loadState();
 
+let moveTimer=null;
+let petStep=0;
+
+const petPositions=[50,40,32,44,58,66,54,50];
+
 function getTradingDayIndex(){
   let d=new Date().getDay();
   if(d===0 || d===6) return -1;
@@ -347,7 +379,48 @@ function renderDays(){
   }
 }
 
+function petHTML(symbol){
+  return `
+    <div class="pet-zone">
+      <div class="pet-walker left" id="petWalker">
+        <div class="pet-bob">
+          <div class="knight">${symbol}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function stopPet(){
+  clearInterval(moveTimer);
+}
+
+function startPet(){
+  stopPet();
+
+  const walker=document.getElementById("petWalker");
+  if(!walker) return;
+
+  petStep=0;
+  walker.style.left=petPositions[petStep]+"%";
+
+  moveTimer=setInterval(()=>{
+    const current=petPositions[petStep];
+    petStep=(petStep+1)%petPositions.length;
+    const next=petPositions[petStep];
+
+    if(next>current){
+      walker.className="pet-walker right";
+    }else if(next<current){
+      walker.className="pet-walker left";
+    }
+
+    walker.style.left=next+"%";
+  },1200);
+}
+
 function showMain(){
+  stopPet();
   renderDays();
 
   let now = new Date();
@@ -364,13 +437,15 @@ function showMain(){
 
   if(todayIndex < 0){
     document.getElementById("playArea").innerHTML =
-      "<div class='knight'>♞</div>" +
+      petHTML("♞") +
       "<div class='ground'></div>" +
       "<div class='textbox'>" +
       dateString + " • " + timeString +
       "<br>WEEKEND" +
       "<br>REST DAY" +
       "</div>";
+
+    startPet();
     return;
   }
 
@@ -389,16 +464,20 @@ function showMain(){
   }
 
   document.getElementById("playArea").innerHTML =
-    "<div class='knight'>" + symbol + "</div>" +
+    petHTML(symbol) +
     "<div class='ground'></div>" +
     "<div class='textbox'>" +
     dateString + " • " + timeString +
     "<br>" + days[todayIndex] +
     "<br>STATUS: " + text +
     "</div>";
+
+  startPet();
 }
 
 function showChecklist(){
+  stopPet();
+
   if(todayIndex<0){
     showMain();
     return;
@@ -443,6 +522,8 @@ function toggleRule(index){
 }
 
 function lockInDay(){
+  stopPet();
+
   let checks=state.checks[todayIndex];
   let total=checks.filter(Boolean).length;
   let passed=total===rules.length;
@@ -453,7 +534,7 @@ function lockInDay(){
   if(passed){playVictory()}else{playFailure()}
 
   document.getElementById("playArea").innerHTML =
-    "<div class='knight'>"+(passed?"♔":"♜")+"</div>" +
+    petHTML(passed?"♔":"♜") +
     "<div class='ground'></div>" +
     "<div class='textbox'>" +
     "DAY LOCKED<br>"+total+"/10 RULES KEPT<br>"+
@@ -461,9 +542,12 @@ function lockInDay(){
     "</div>";
 
   renderDays();
+  startPet();
 }
 
 function showWeek(){
+  stopPet();
+
   playBeep(380,80,.06);
   renderDays();
 
@@ -472,16 +556,20 @@ function showWeek(){
   let active=state.statuses.filter(s=>s!=="inactive").length;
 
   document.getElementById("playArea").innerHTML =
-    "<div class='knight'>♞</div>" +
+    petHTML("♞") +
     "<div class='ground'></div>" +
     "<div class='textbox'>" +
     "WEEK "+weekKey+"<br>"+
     "CLEAN:"+clean+" FAILED:"+failed+"<br>"+
     "ACTIVE DAYS:"+active+
     "</div>";
+
+  startPet();
 }
 
 function resetWeek(){
+  stopPet();
+
   playBeep(220,140,.08);
   state=freshState();
   saveState();
