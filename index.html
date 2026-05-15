@@ -332,10 +332,119 @@ let state=loadState();
 
 let moveTimer=null;
 let petStep=0;
-let audioCtx=null;
 let poweredOn=false;
 
 const petPositions=[50,40,32,44,58,66,54,50];
+const sounds={};
+
+function makeToneWav(freq=440,duration=.1,volume=.7){
+  const sampleRate=22050;
+  const samples=Math.floor(sampleRate*duration);
+  const dataSize=samples*2;
+  const buffer=new ArrayBuffer(44+dataSize);
+  const view=new DataView(buffer);
+
+  function writeString(offset,string){
+    for(let i=0;i<string.length;i++){
+      view.setUint8(offset+i,string.charCodeAt(i));
+    }
+  }
+
+  writeString(0,"RIFF");
+  view.setUint32(4,36+dataSize,true);
+  writeString(8,"WAVE");
+  writeString(12,"fmt ");
+  view.setUint32(16,16,true);
+  view.setUint16(20,1,true);
+  view.setUint16(22,1,true);
+  view.setUint32(24,sampleRate,true);
+  view.setUint32(28,sampleRate*2,true);
+  view.setUint16(32,2,true);
+  view.setUint16(34,16,true);
+  writeString(36,"data");
+  view.setUint32(40,dataSize,true);
+
+  for(let i=0;i<samples;i++){
+    const t=i/sampleRate;
+    const square=Math.sin(2*Math.PI*freq*t)>=0?1:-1;
+    const fadeOut=1-(i/samples);
+    const fadeIn=Math.min(1,i/(sampleRate*.01));
+    const env=fadeOut*fadeIn;
+    const sample=square*volume*env*32767;
+    view.setInt16(44+i*2,sample,true);
+  }
+
+  let binary="";
+  const bytes=new Uint8Array(buffer);
+  const chunkSize=8192;
+
+  for(let i=0;i<bytes.length;i+=chunkSize){
+    const chunk=bytes.subarray(i,i+chunkSize);
+    binary+=String.fromCharCode.apply(null,chunk);
+  }
+
+  return "data:audio/wav;base64,"+btoa(binary);
+}
+
+function buildSounds(){
+  sounds.power=new Audio(makeToneWav(130,.08,.8));
+  sounds.menu=new Audio(makeToneWav(500,.09,.75));
+  sounds.tick=new Audio(makeToneWav(720,.045,.7));
+  sounds.fail=new Audio(makeToneWav(170,.26,.8));
+  sounds.reset=new Audio(makeToneWav(220,.18,.75));
+
+  sounds.boot1=new Audio(makeToneWav(196,.09,.85));
+  sounds.boot2=new Audio(makeToneWav(294,.10,.85));
+  sounds.boot3=new Audio(makeToneWav(392,.11,.85));
+  sounds.boot4=new Audio(makeToneWav(523,.15,.9));
+
+  sounds.victory1=new Audio(makeToneWav(523,.13,.8));
+  sounds.victory2=new Audio(makeToneWav(659,.13,.8));
+  sounds.victory3=new Audio(makeToneWav(784,.24,.85));
+
+  for(const key in sounds){
+    sounds[key].preload="auto";
+    sounds[key].playsInline=true;
+  }
+}
+
+function playSound(name){
+  if(!sounds[name]) return;
+
+  const s=sounds[name].cloneNode();
+  s.volume=1;
+  s.play().catch(()=>{});
+}
+
+function playBoot(){
+  playSound("power");
+  setTimeout(()=>playSound("boot1"),90);
+  setTimeout(()=>playSound("boot2"),210);
+  setTimeout(()=>playSound("boot3"),340);
+  setTimeout(()=>playSound("boot4"),500);
+}
+
+function playMenu(){
+  playSound("menu");
+}
+
+function playTick(){
+  playSound("tick");
+}
+
+function playFailure(){
+  playSound("fail");
+}
+
+function playVictory(){
+  playSound("victory1");
+  setTimeout(()=>playSound("victory2"),150);
+  setTimeout(()=>playSound("victory3"),300);
+}
+
+function playReset(){
+  playSound("reset");
+}
 
 function getTradingDayIndex(){
   let d=new Date().getDay();
@@ -373,65 +482,11 @@ function saveState(){
   localStorage.setItem("kaizenKnight",JSON.stringify(state));
 }
 
-function unlockAudio(){
-  if(!audioCtx){
-    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-  }
-
-  if(audioCtx.state==="suspended"){
-    audioCtx.resume();
-  }
-}
-
-function playBeep(freq=440,duration=100,volume=.12){
-  if(!audioCtx) return;
-
-  const oscillator=audioCtx.createOscillator();
-  const gainNode=audioCtx.createGain();
-
-  oscillator.type="square";
-  oscillator.frequency.value=freq;
-
-  gainNode.gain.setValueAtTime(volume,audioCtx.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration/1000);
-
-  oscillator.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
-
-  oscillator.start();
-  oscillator.stop(audioCtx.currentTime+duration/1000);
-}
-
-function playTick(){
-  playBeep(700,45,.12);
-}
-
-function playVictory(){
-  playBeep(523,130,.14);
-  setTimeout(()=>playBeep(659,130,.14),150);
-  setTimeout(()=>playBeep(784,240,.15),300);
-}
-
-function playFailure(){
-  playBeep(180,260,.15);
-}
-
-function playMenu(){
-  playBeep(500,90,.13);
-}
-
-function playBoot(){
-  playBeep(196,90,.16);
-  setTimeout(()=>playBeep(294,100,.16),120);
-  setTimeout(()=>playBeep(392,110,.16),250);
-  setTimeout(()=>playBeep(523,150,.17),400);
-}
-
 function powerOn(){
   if(poweredOn) return;
-
   poweredOn=true;
-  unlockAudio();
+
+  playBoot();
   showBoot();
 }
 
@@ -497,8 +552,6 @@ function showBoot(){
   document.getElementById("statusBar").innerHTML="POWER";
   document.getElementById("playArea").innerHTML="<div class='boot-text'>BOOTING...</div>";
 
-  setTimeout(()=>playBoot(),120);
-
   setTimeout(()=>{
     document.getElementById("statusBar").innerHTML="KAIZEN KNIGHT";
   },650);
@@ -506,7 +559,7 @@ function showBoot(){
   setTimeout(()=>{
     document.getElementById("screen").className="screen";
     showMain(true);
-  },1100);
+  },1200);
 }
 
 function showMain(fromBoot=false){
@@ -673,12 +726,13 @@ function resetWeek(){
 
   stopPet();
 
-  playBeep(220,180,.15);
+  playReset();
   state=freshState();
   saveState();
   showMain();
 }
 
+buildSounds();
 renderDays();
 </script>
 
