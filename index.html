@@ -2,7 +2,17 @@
 <html>
 <head>
   <title>Kaizen Knight</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kaizen Knight">
+  <meta name="theme-color" content="#222222">
+
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" href="icon.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,6 +28,9 @@
       align-items:center;
       font-family:'VT323', monospace;
       overflow:hidden;
+      -webkit-user-select:none;
+      user-select:none;
+      touch-action:manipulation;
     }
 
     .device{
@@ -430,17 +443,9 @@ function playBoot(){
   setTimeout(()=>playSound("boot4"),500);
 }
 
-function playMenu(){
-  playSound("menu");
-}
-
-function playTick(){
-  playSound("tick");
-}
-
-function playFailure(){
-  playSound("fail");
-}
+function playMenu(){ playSound("menu"); }
+function playTick(){ playSound("tick"); }
+function playFailure(){ playSound("fail"); }
 
 function playVictory(){
   playSound("victory1");
@@ -448,9 +453,7 @@ function playVictory(){
   setTimeout(()=>playSound("victory3"),300);
 }
 
-function playReset(){
-  playSound("reset");
-}
+function playReset(){ playSound("reset"); }
 
 function getTradingDayIndex(){
   let d=new Date().getDay();
@@ -522,7 +525,11 @@ function petHTML(type="knight"){
     <div class="pet-zone">
       <div class="pet-walker left" id="petWalker">
         <div class="pet-bob">
-          <img class="pet-img" id="petImg" src="${src}" data-pet-type="${type}" data-can-blink="${canBlink}" alt="Kaizen Knight">
+          <img class="pet-img" id="petImg"
+               src="${src}"
+               data-pet-type="${type}"
+               data-can-blink="${canBlink}"
+               alt="Kaizen Knight">
         </div>
       </div>
     </div>
@@ -550,6 +557,7 @@ function startBlink(){
         petAgain.src="knight.png";
       }
     },140);
+
   },3600);
 }
 
@@ -578,6 +586,7 @@ function startPet(delay=0){
 
       walker.style.left=next+"%";
     },1200);
+
   },delay);
 }
 
@@ -608,53 +617,53 @@ function showMain(fromBoot=false){
   document.getElementById("screen").className="screen";
   document.getElementById("statusBar").innerHTML="KAIZEN KNIGHT";
 
-  let now = new Date();
+  let now=new Date();
 
-  let timeString = now.toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit'
+  let timeString=now.toLocaleTimeString([],{
+    hour:'2-digit',
+    minute:'2-digit'
   });
 
-  let dateString = now.toLocaleDateString([], {
-    month: 'short',
-    day: 'numeric'
+  let dateString=now.toLocaleDateString([],{
+    month:'short',
+    day:'numeric'
   });
 
-  if(todayIndex < 0){
-    document.getElementById("playArea").innerHTML =
-      petHTML("knight") +
-      "<div class='ground'></div>" +
-      "<div class='textbox'>" +
-      dateString + " • " + timeString +
-      "<br>WEEKEND" +
-      "<br>REST DAY" +
+  if(todayIndex<0){
+    document.getElementById("playArea").innerHTML=
+      petHTML("knight")+
+      "<div class='ground'></div>"+
+      "<div class='textbox'>"+
+      dateString+" • "+timeString+
+      "<br>WEEKEND"+
+      "<br>REST DAY"+
       "</div>";
 
     startPet(fromBoot ? 650 : 0);
     return;
   }
 
-  let status = state.statuses[todayIndex];
-  let text = "STEADY";
-  let petType = "knight";
+  let status=state.statuses[todayIndex];
+  let text="STEADY";
+  let petType="knight";
 
-  if(status === "complete"){
-    text = "DAY LOCKED CLEAN";
-    petType = "king";
+  if(status==="complete"){
+    text="DAY LOCKED CLEAN";
+    petType="king";
   }
 
-  if(status === "failed"){
-    text = "INTEGRITY DAMAGED";
-    petType = "rook";
+  if(status==="failed"){
+    text="INTEGRITY DAMAGED";
+    petType="rook";
   }
 
-  document.getElementById("playArea").innerHTML =
-    petHTML(petType) +
-    "<div class='ground'></div>" +
-    "<div class='textbox'>" +
-    dateString + " • " + timeString +
-    "<br>" + days[todayIndex] +
-    "<br>STATUS: " + text +
+  document.getElementById("playArea").innerHTML=
+    petHTML(petType)+
+    "<div class='ground'></div>"+
+    "<div class='textbox'>"+
+    dateString+" • "+timeString+
+    "<br>"+days[todayIndex]+
+    "<br>STATUS: "+text+
     "</div>";
 
   startPet(fromBoot ? 650 : 0);
@@ -701,6 +710,7 @@ function toggleRule(index){
   saveState();
 
   let box=document.getElementById("box"+index);
+
   if(box){
     box.classList.toggle("checked",state.checks[todayIndex][index]);
   }
@@ -720,14 +730,18 @@ function lockInDay(){
   state.statuses[todayIndex]=passed?"complete":"failed";
   saveState();
 
-  if(passed){playVictory()}else{playFailure()}
+  if(passed){
+    playVictory();
+  }else{
+    playFailure();
+  }
 
-  document.getElementById("playArea").innerHTML =
-    petHTML(passed ? "king" : "rook") +
-    "<div class='ground'></div>" +
-    "<div class='textbox'>" +
+  document.getElementById("playArea").innerHTML=
+    petHTML(passed ? "king" : "rook")+
+    "<div class='ground'></div>"+
+    "<div class='textbox'>"+
     "DAY LOCKED<br>"+total+"/10 RULES KEPT<br>"+
-    (passed?"DISCIPLINE MAINTAINED":"INTEGRITY DAMAGED")+
+    (passed ? "DISCIPLINE MAINTAINED" : "INTEGRITY DAMAGED")+
     "</div>";
 
   renderDays();
@@ -746,10 +760,10 @@ function showWeek(){
   let failed=state.statuses.filter(s=>s==="failed").length;
   let active=state.statuses.filter(s=>s!=="inactive").length;
 
-  document.getElementById("playArea").innerHTML =
-    petHTML("knight") +
-    "<div class='ground'></div>" +
-    "<div class='textbox'>" +
+  document.getElementById("playArea").innerHTML=
+    petHTML("knight")+
+    "<div class='ground'></div>"+
+    "<div class='textbox'>"+
     "WEEK "+weekKey+"<br>"+
     "CLEAN:"+clean+" FAILED:"+failed+"<br>"+
     "ACTIVE DAYS:"+active+
