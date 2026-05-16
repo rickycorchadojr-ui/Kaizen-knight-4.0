@@ -99,16 +99,16 @@
     }
 
     .pet-zone{
-      width:180px;
-      height:78px;
+      width:240px;
+      height:130px;
       position:relative;
-      margin-bottom:8px;
+      margin-bottom:-10px;
     }
 
     .pet-walker{
       position:absolute;
       left:50%;
-      bottom:0;
+      bottom:28px;
       transform:translateX(-50%);
     }
 
@@ -116,18 +116,23 @@
       animation:bob 1.2s infinite steps(2);
     }
 
-    .knight{
-      font-size:58px;
-      line-height:1;
+    .pet-img{
+      width:160px;
+      height:160px;
       display:block;
-      transform-origin:center center;
+      image-rendering:pixelated;
+      image-rendering:crisp-edges;
+      -ms-interpolation-mode:nearest-neighbor;
+      object-fit:contain;
+      opacity:.92;
+      filter:grayscale(1) contrast(2) brightness(.55);
     }
 
-    .pet-walker.right .knight{
+    .pet-walker.right .pet-img{
       transform:scaleX(-1);
     }
 
-    .pet-walker.left .knight{
+    .pet-walker.left .pet-img{
       transform:scaleX(1);
     }
 
@@ -331,6 +336,7 @@ let weekKey=getWeekKey();
 let state=loadState();
 
 let moveTimer=null;
+let blinkTimer=null;
 let petStep=0;
 let poweredOn=false;
 
@@ -502,12 +508,21 @@ function renderDays(){
   }
 }
 
-function petHTML(symbol){
+function getPetImage(type){
+  if(type==="king") return "king.png";
+  if(type==="rook") return "rook.png";
+  return "knight.png";
+}
+
+function petHTML(type="knight"){
+  const src=getPetImage(type);
+  const canBlink=type==="knight";
+
   return `
     <div class="pet-zone">
       <div class="pet-walker left" id="petWalker">
         <div class="pet-bob">
-          <div class="knight">${symbol}</div>
+          <img class="pet-img" id="petImg" src="${src}" data-pet-type="${type}" data-can-blink="${canBlink}" alt="Kaizen Knight">
         </div>
       </div>
     </div>
@@ -516,6 +531,26 @@ function petHTML(symbol){
 
 function stopPet(){
   clearInterval(moveTimer);
+  clearInterval(blinkTimer);
+}
+
+function startBlink(){
+  clearInterval(blinkTimer);
+
+  blinkTimer=setInterval(()=>{
+    const pet=document.getElementById("petImg");
+    if(!pet) return;
+    if(pet.dataset.canBlink!=="true") return;
+
+    pet.src="blink.png";
+
+    setTimeout(()=>{
+      const petAgain=document.getElementById("petImg");
+      if(petAgain && petAgain.dataset.canBlink==="true"){
+        petAgain.src="knight.png";
+      }
+    },140);
+  },3600);
 }
 
 function startPet(delay=0){
@@ -527,6 +562,8 @@ function startPet(delay=0){
 
     petStep=0;
     walker.style.left=petPositions[petStep]+"%";
+
+    startBlink();
 
     moveTimer=setInterval(()=>{
       const current=petPositions[petStep];
@@ -585,7 +622,7 @@ function showMain(fromBoot=false){
 
   if(todayIndex < 0){
     document.getElementById("playArea").innerHTML =
-      petHTML("♞") +
+      petHTML("knight") +
       "<div class='ground'></div>" +
       "<div class='textbox'>" +
       dateString + " • " + timeString +
@@ -599,20 +636,20 @@ function showMain(fromBoot=false){
 
   let status = state.statuses[todayIndex];
   let text = "STEADY";
-  let symbol = "♞";
+  let petType = "knight";
 
   if(status === "complete"){
     text = "DAY LOCKED CLEAN";
-    symbol = "♔";
+    petType = "king";
   }
 
   if(status === "failed"){
     text = "INTEGRITY DAMAGED";
-    symbol = "♜";
+    petType = "rook";
   }
 
   document.getElementById("playArea").innerHTML =
-    petHTML(symbol) +
+    petHTML(petType) +
     "<div class='ground'></div>" +
     "<div class='textbox'>" +
     dateString + " • " + timeString +
@@ -686,7 +723,7 @@ function lockInDay(){
   if(passed){playVictory()}else{playFailure()}
 
   document.getElementById("playArea").innerHTML =
-    petHTML(passed?"♔":"♜") +
+    petHTML(passed ? "king" : "rook") +
     "<div class='ground'></div>" +
     "<div class='textbox'>" +
     "DAY LOCKED<br>"+total+"/10 RULES KEPT<br>"+
@@ -710,7 +747,7 @@ function showWeek(){
   let active=state.statuses.filter(s=>s!=="inactive").length;
 
   document.getElementById("playArea").innerHTML =
-    petHTML("♞") +
+    petHTML("knight") +
     "<div class='ground'></div>" +
     "<div class='textbox'>" +
     "WEEK "+weekKey+"<br>"+
