@@ -29,9 +29,9 @@
     @keyframes bootPulse{0%{opacity:1}50%{opacity:.35}100%{opacity:1}}
     .pet-zone{width:240px;height:130px;position:relative;margin-bottom:-10px;}
     .pet-walker{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);}
-    .pet-bob{animation:bob 1.2s infinite steps(2);}
+    .pet-bob{animation:bob 1.2s infinite steps(2);position:relative;width:160px;height:160px;}
     .pet-img{width:160px;height:160px;display:block;image-rendering:pixelated;image-rendering:crisp-edges;object-fit:contain;opacity:.92;filter:grayscale(1) contrast(2) brightness(.55);}
-    .firework-img{width:160px;height:160px;position:absolute;left:0;top:0;display:none;image-rendering:pixelated;image-rendering:crisp-edges;object-fit:contain;pointer-events:none;}
+    .firework-img{width:160px;height:160px;position:absolute;left:0;top:0;display:none;image-rendering:pixelated;image-rendering:crisp-edges;object-fit:contain;pointer-events:none;z-index:3;}
     .pet-walker.right .pet-img{transform:scaleX(-1);}
     .pet-walker.left .pet-img{transform:scaleX(1);}
     @keyframes bob{0%{transform:translateY(0)}50%{transform:translateY(-4px)}100%{transform:translateY(0)}}
@@ -301,11 +301,10 @@ function startFirework(){
   const fw=document.getElementById("fireworkImg");
   if(!fw) return;
 
-  play("firework");
-
   fireworkFrame=1;
   fw.src="Firework1.png";
   fw.style.display="block";
+  play("firework");
 
   fireworkTimer=setInterval(()=>{
     fireworkFrame++;
@@ -313,6 +312,10 @@ function startFirework(){
     if(fireworkFrame>12){
       stopFirework();
       return;
+    }
+
+    if(fireworkFrame===5 || fireworkFrame===9){
+      play("firework");
     }
 
     fw.src="Firework"+fireworkFrame+".png";
@@ -439,13 +442,12 @@ function showMain(fromBoot=false){
   startPet(fromBoot ? 650 : 0);
 }
 
-function showCheck(){
+function showCheck(restoreScroll=null){
   if(todayIndex<0){
     showMain();
     return;
   }
 
-  play("menu");
   stopPet();
   stopFirework();
 
@@ -455,7 +457,7 @@ function showCheck(){
   let html="";
   html+="<div class='panel'>";
   html+="<div class='panel-title'>"+days[todayIndex]+" CHECK</div>";
-  html+="<div class='scroll'>";
+  html+="<div class='scroll' id='checkScroll'>";
 
   html+="<div class='section-label'>VOWS</div>";
   html+="<div class='small-note'>CHECK WHAT HELD TRUE TODAY</div>";
@@ -485,6 +487,16 @@ function showCheck(){
   html+="</div>";
 
   document.getElementById("playArea").innerHTML=html;
+
+  if(restoreScroll!==null){
+    const sc=document.getElementById("checkScroll");
+    if(sc) sc.scrollTop=restoreScroll;
+  }
+}
+
+function showCheckWithMenuSound(){
+  play("menu");
+  showCheck();
 }
 
 function showCode(){
@@ -510,21 +522,28 @@ function showCode(){
   document.getElementById("playArea").innerHTML=html;
 }
 
+function getCheckScrollTop(){
+  const sc=document.getElementById("checkScroll");
+  return sc ? sc.scrollTop : 0;
+}
+
 function toggleVow(i){
+  let scrollTop=getCheckScrollTop();
   let vowState=getVowStateForToday();
   vowState[i]=!vowState[i];
 
   saveState();
   play("tick");
-  showCheck();
+  showCheck(scrollTop);
 }
 
 function toggleDamage(i){
+  let scrollTop=getCheckScrollTop();
   state.damage[todayIndex][i]=!state.damage[todayIndex][i];
 
   saveState();
   play("tick");
-  showCheck();
+  showCheck(scrollTop);
 }
 
 function lockDay(){
@@ -560,12 +579,20 @@ function lockDay(){
   let petType=passed ? "king" : "rook";
   if(passed && perfectWeek()) petType="angel";
 
+  let sealText="DAY SEALED";
+  let resultText=passed ? "INTEGRITY PRESERVED" : "INTEGRITY DAMAGED";
+
+  if(shouldPlayFirework){
+    sealText="PERFECT WEEK!";
+    resultText="INTEGRITY PRESERVED";
+  }
+
   document.getElementById("playArea").innerHTML=
     petHTML(petType)+
     "<div class='ground'></div>"+
     "<div class='textbox'>"+
-    "DAY SEALED"+
-    "<br>"+(passed ? "INTEGRITY PRESERVED" : "INTEGRITY DAMAGED")+
+    sealText+
+    "<br>"+resultText+
     "</div>";
 
   startPet();
@@ -585,6 +612,10 @@ function resetWeek(){
 
 buildSounds();
 renderDays();
+</script>
+
+<script>
+document.querySelector("button[onclick='showCheck()']").setAttribute("onclick","showCheckWithMenuSound()");
 </script>
 
 </body>
