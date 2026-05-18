@@ -31,6 +31,7 @@
     .pet-walker{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);}
     .pet-bob{animation:bob 1.2s infinite steps(2);}
     .pet-img{width:160px;height:160px;display:block;image-rendering:pixelated;image-rendering:crisp-edges;object-fit:contain;opacity:.92;filter:grayscale(1) contrast(2) brightness(.55);}
+    .firework-img{width:160px;height:160px;position:absolute;left:0;top:0;display:none;image-rendering:pixelated;image-rendering:crisp-edges;object-fit:contain;pointer-events:none;}
     .pet-walker.right .pet-img{transform:scaleX(-1);}
     .pet-walker.left .pet-img{transform:scaleX(1);}
     @keyframes bob{0%{transform:translateY(0)}50%{transform:translateY(-4px)}100%{transform:translateY(0)}}
@@ -135,6 +136,9 @@ let moveTimer=null;
 let petStep=0;
 let poweredOn=false;
 
+let fireworkTimer=null;
+let fireworkFrame=1;
+
 const petPositions=[50,40,32,32,44,58,66,66,54,50];
 const sounds={};
 
@@ -195,6 +199,7 @@ function buildSounds(){
   sounds.good1=new Audio(makeToneWav(523,.12,.8));
   sounds.good2=new Audio(makeToneWav(659,.12,.8));
   sounds.good3=new Audio(makeToneWav(784,.22,.85));
+  sounds.firework=new Audio("8d82b5_Super_Mario_Bros_Fireworks_Sound_Effect.mp3");
 }
 
 function play(name){
@@ -267,6 +272,7 @@ function petHTML(type="knight"){
       <div class="pet-walker left" id="petWalker">
         <div class="pet-bob">
           <img class="pet-img" id="petImg" src="${getPetImage(type)}" data-pet-type="${type}">
+          <img class="firework-img" id="fireworkImg" src="Firework1.png">
         </div>
       </div>
     </div>
@@ -275,6 +281,42 @@ function petHTML(type="knight"){
 
 function stopPet(){
   clearInterval(moveTimer);
+}
+
+function stopFirework(){
+  clearInterval(fireworkTimer);
+  fireworkTimer=null;
+  fireworkFrame=1;
+
+  const fw=document.getElementById("fireworkImg");
+  if(fw){
+    fw.style.display="none";
+    fw.src="Firework1.png";
+  }
+}
+
+function startFirework(){
+  stopFirework();
+
+  const fw=document.getElementById("fireworkImg");
+  if(!fw) return;
+
+  play("firework");
+
+  fireworkFrame=1;
+  fw.src="Firework1.png";
+  fw.style.display="block";
+
+  fireworkTimer=setInterval(()=>{
+    fireworkFrame++;
+
+    if(fireworkFrame>12){
+      stopFirework();
+      return;
+    }
+
+    fw.src="Firework"+fireworkFrame+".png";
+  },500);
 }
 
 function startPet(delay=0){
@@ -361,6 +403,7 @@ function showBoot(){
 
 function showMain(fromBoot=false){
   stopPet();
+  stopFirework();
   renderDays();
 
   document.getElementById("screen").className="screen";
@@ -404,6 +447,7 @@ function showCheck(){
 
   play("menu");
   stopPet();
+  stopFirework();
 
   let todaysVows=getTodaysVows();
   let vowState=getVowStateForToday();
@@ -446,6 +490,7 @@ function showCheck(){
 function showCode(){
   play("menu");
   stopPet();
+  stopFirework();
 
   let html="";
   html+="<div class='panel'>";
@@ -484,6 +529,7 @@ function toggleDamage(i){
 
 function lockDay(){
   stopPet();
+  stopFirework();
 
   let passed=true;
   let vowState=getVowStateForToday();
@@ -498,6 +544,8 @@ function lockDay(){
 
   state.statuses[todayIndex]=passed ? "complete" : "failed";
   saveState();
+
+  let shouldPlayFirework=passed && todayIndex===5 && perfectWeek();
 
   if(passed){
     play("good1");
@@ -521,10 +569,15 @@ function lockDay(){
     "</div>";
 
   startPet();
+
+  if(shouldPlayFirework){
+    setTimeout(()=>startFirework(),450);
+  }
 }
 
 function resetWeek(){
   play("reset");
+  stopFirework();
   state=freshState();
   saveState();
   showMain();
