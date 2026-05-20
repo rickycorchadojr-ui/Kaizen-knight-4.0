@@ -141,7 +141,9 @@ const codeNotes=[
   "I AM DETERMINED TO HAVE A GOOD DAY REGARDLESS OF WHAT HAPPENS.",
   "BE GRATEFUL. SHOW REVERENCE FOR EVERY COMBINE."
 ];
+
 const days=["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"];
+
 let todayIndex=getTradingDayIndex();
 let weekKey=getWeekKey();
 let state=loadState();
@@ -151,14 +153,29 @@ let poweredOn=false;
 let fireworkTimer=null;
 let fireworkFrame=1;
 let achievementTimer=null;
+
 const petPositions=[50,40,32,32,44,58,66,66,54,50];
 const sounds={};
 
 function requirePower(){ return poweredOn; }
-function getTodaysVows(){ return todayIndex===0 ? sundayVows : weekdayVows; }
+
+function getTodaysVows(){
+  return todayIndex===0 ? sundayVows : weekdayVows;
+}
+
+function getSceneImage(){
+  if(state.streak>=35) return "scene7.png";
+  if(state.streak>=30) return "scene6.png";
+  if(state.streak>=25) return "scene5.png";
+  if(state.streak>=20) return "scene4.png";
+  if(state.streak>=15) return "scene3.png";
+  if(state.streak>=10) return "scene2.png";
+  if(state.streak>=5) return "scene1.png";
+  return "bgtest.png";
+}
 
 function sceneBackgroundHTML(){
-  return "<img class='scene-bg' src='bgtest.png'>";
+  return "<img class='scene-bg' src='"+getSceneImage()+"'>";
 }
 
 function makeToneSequenceWav(sequence){
