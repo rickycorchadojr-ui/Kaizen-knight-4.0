@@ -61,79 +61,14 @@
 
     .gallery-wrap{width:100%;height:100%;display:flex;flex-direction:column;background:#f8f8f8;}
     .gallery-title{text-align:center;font-size:25px;padding:5px;border-bottom:4px solid #111;flex-shrink:0;}
-
-    .gallery-hall{
-      flex:1;
-      overflow-x:auto;
-      overflow-y:hidden;
-      white-space:nowrap;
-      background:#f8f8f8;
-      box-sizing:border-box;
-      scroll-snap-type:none;
-      -webkit-overflow-scrolling:touch;
-    }
-
-    .gallery-room{
-      display:inline-flex;
-      vertical-align:top;
-      width:100%;
-      height:100%;
-      box-sizing:border-box;
-      position:relative;
-      background:#f8f8f8 url("gallery_bg.png") center/cover no-repeat;
-      image-rendering:pixelated;
-      image-rendering:crisp-edges;
-      justify-content:center;
-      align-items:flex-end;
-      padding:18px 18px 20px;
-    }
-
+    .gallery-hall{flex:1;overflow-x:auto;overflow-y:hidden;white-space:nowrap;background:#f8f8f8;box-sizing:border-box;scroll-snap-type:none;-webkit-overflow-scrolling:touch;}
+    .gallery-room{display:inline-flex;vertical-align:top;width:100%;height:100%;box-sizing:border-box;position:relative;background:#f8f8f8 url("gallery_bg.png") center/cover no-repeat;image-rendering:pixelated;image-rendering:crisp-edges;justify-content:center;align-items:flex-end;padding:18px 18px 20px;}
     .gallery-room.locked{opacity:.38;}
-
-    .trophy-display{
-      position:relative;
-      z-index:2;
-      width:180px;
-      height:155px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:flex-end;
-      text-align:center;
-      margin-bottom:0;
-    }
-
-    .trophy-day{
-      font-size:34px;
-      line-height:.9;
-      margin-bottom:4px;
-      background:transparent;
-      border:none;
-      padding:0;
-    }
-
-    .trophy-date{
-      font-size:20px;
-      line-height:.9;
-      min-height:22px;
-      margin-bottom:18px;
-      width:180px;
-      overflow:hidden;
-    }
-
-    .trophy-icon{
-      font-size:30px;
-      line-height:1;
-      margin-bottom:0;
-    }
-
-    .empty-trophy{
-      font-size:30px;
-      line-height:1;
-      color:#777;
-      margin-bottom:0;
-    }
-
+    .trophy-display{position:relative;z-index:2;width:180px;height:155px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;margin-bottom:0;}
+    .trophy-day{font-size:34px;line-height:.9;margin-bottom:4px;background:transparent;border:none;padding:0;}
+    .trophy-date{font-size:20px;line-height:.9;min-height:22px;margin-bottom:18px;width:180px;overflow:hidden;}
+    .trophy-icon{font-size:30px;line-height:1;margin-bottom:0;}
+    .empty-trophy{font-size:30px;line-height:1;color:#777;margin-bottom:0;}
     .gallery-footer{font-size:19px;text-align:center;border-top:4px solid #111;padding:4px;background:#f8f8f8;}
 
     .panel-buttons{border-top:4px solid #111;padding:6px;display:flex;gap:8px;background:#f8f8f8;}
@@ -231,7 +166,6 @@ const petPositions=[50,40,32,32,44,58,66,66,54,50];
 const sounds={};
 
 function requirePower(){ return poweredOn; }
-
 function getTodaysVows(){ return todayIndex===0 ? sundayVows : weekdayVows; }
 
 function getSceneImage(){
@@ -367,6 +301,32 @@ function buildSounds(){
     {freq:880,duration:.055,volume:.85},{freq:0,duration:.025},
     {freq:520,duration:.055,volume:.85}
   ]));
+
+  sounds.vowNotes=[
+    new Audio(makeToneSequenceWav([{freq:523.25,duration:.12,volume:.55}])),
+    new Audio(makeToneSequenceWav([{freq:587.33,duration:.12,volume:.55}])),
+    new Audio(makeToneSequenceWav([{freq:659.25,duration:.12,volume:.55}])),
+    new Audio(makeToneSequenceWav([{freq:698.46,duration:.12,volume:.55}])),
+    new Audio(makeToneSequenceWav([{freq:783.99,duration:.12,volume:.55}])),
+    new Audio(makeToneSequenceWav([{freq:880.00,duration:.12,volume:.55}])),
+    new Audio(makeToneSequenceWav([{freq:987.77,duration:.12,volume:.55}])),
+    new Audio(makeToneSequenceWav([{freq:1046.50,duration:.18,volume:.6}]))
+  ];
+
+  sounds.damageNote=new Audio(makeToneSequenceWav([
+    {freq:392,duration:.08,volume:.45},
+    {freq:0,duration:.025},
+    {freq:349.23,duration:.14,volume:.42}
+  ]));
+
+  sounds.resolve=new Audio(makeToneSequenceWav([
+    {freq:783.99,duration:.09,volume:.6},
+    {freq:0,duration:.03},
+    {freq:987.77,duration:.09,volume:.6},
+    {freq:0,duration:.03},
+    {freq:1046.50,duration:.22,volume:.65}
+  ]));
+
   sounds.firework=new Audio("8d82b5_Super_Mario_Bros_Fireworks_Sound_Effect.mp3");
   sounds.perfectWeek=new Audio("fever-stage-clear (online-video-cutter.com).mp3");
 }
@@ -375,6 +335,18 @@ function play(name){
   if(!sounds[name]) return;
   let s=sounds[name].cloneNode();
   s.play().catch(()=>{});
+}
+
+function playVowNote(i){
+  if(!sounds.vowNotes) return;
+  let note=sounds.vowNotes[i % sounds.vowNotes.length].cloneNode();
+  note.play().catch(()=>{});
+}
+
+function playDamageNote(){
+  if(!sounds.damageNote) return;
+  let note=sounds.damageNote.cloneNode();
+  note.play().catch(()=>{});
 }
 
 function playGoodSeal(){ play("good"); }
@@ -785,7 +757,6 @@ function showGallery(){
 
     html+="<div class='gallery-room "+(earned?"":"locked")+"'>";
     html+="<div class='trophy-display'>";
-
     html+="<div class='trophy-day'>DAY "+day+"</div>";
     html+="<div class='trophy-date'>"+(earned ? earned : "")+"</div>";
 
@@ -828,10 +799,18 @@ function toggleVow(i){
 
   let scrollTop=getCheckScrollTop();
   let vowState=getVowStateForToday();
+  let wasChecked=vowState[i];
+
   vowState[i]=!vowState[i];
 
   saveState();
-  play("tick");
+
+  if(!wasChecked){
+    playVowNote(i);
+  }else{
+    play("reset");
+  }
+
   showCheck(scrollTop);
 }
 
@@ -839,10 +818,18 @@ function toggleDamage(i){
   if(!requirePower()) return;
 
   let scrollTop=getCheckScrollTop();
-  state.damage[todayIndex][i]=!state.damage[todayIndex][i];
+  let wasChecked=state.damage[todayIndex][i];
+
+  state.damage[todayIndex][i]=!wasChecked;
 
   saveState();
-  play("tick");
+
+  if(!wasChecked){
+    playDamageNote();
+  }else{
+    play("reset");
+  }
+
   showCheck(scrollTop);
 }
 
@@ -901,10 +888,8 @@ function lockDay(){
 
   if(shouldPlayFirework){
     play("perfectWeek");
-  }else if(todayIndex===5 && weeklyForm){
-    playGoodSeal();
   }else if(passed){
-    playGoodSeal();
+    play("resolve");
   }else{
     play("fail");
   }
