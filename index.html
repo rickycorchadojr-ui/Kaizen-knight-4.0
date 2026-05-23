@@ -415,13 +415,6 @@ function createFreshVault(){
   return vault;
 }
 
-function createFreshVaultEarned(){
-  return{
-    sunday:Array(sundayVows.length).fill(false),
-    weekday:Array.from({length:6},()=>Array(weekdayVows.length).fill(false))
-  };
-}
-
 function ensureVault(){
   if(!state.vault) state.vault=createFreshVault();
   if(!state.vaultEarned) state.vaultEarned=createFreshVaultEarned();
@@ -430,19 +423,6 @@ function ensureVault(){
   for(let i=0;i<vows.length;i++){
     if(typeof state.vault[vows[i]]!=="number") state.vault[vows[i]]=0;
   }
-}
-
-function getVaultEarnedForToday(){
-  ensureVault();
-  return todayIndex===0 ? state.vaultEarned.sunday : state.vaultEarned.weekday[todayIndex];
-}
-
-function addVaultCoinOnce(vow,index){
-  ensureVault();
-  let earned=getVaultEarnedForToday();
-  if(earned[index]) return;
-  state.vault[vow]++;
-  earned[index]=true;
 }
 
 function vaultCoinsHTML(count){
@@ -476,7 +456,6 @@ function freshState(){
     achievements:{},
  records:[],
 vault:createFreshVault(),
-vaultEarned:createFreshVaultEarned(),
 statuses:["inactive","inactive","inactive","inactive","inactive","inactive"],
     sundayVows:Array(sundayVows.length).fill(false),
     weekdayVows:Array.from({length:6},()=>Array(weekdayVows.length).fill(false)),
@@ -495,7 +474,6 @@ function loadState(){
       newState.achievements=parsed.achievements || {};
    newState.records=parsed.records || [];
 newState.vault=parsed.vault || createFreshVault();
-newState.vaultEarned=createFreshVaultEarned();
 return newState;
     }
     if(!parsed.sundayVows || parsed.sundayVows.length!==sundayVows.length) return freshState();
@@ -507,7 +485,6 @@ return newState;
     if(!parsed.achievements) parsed.achievements={};
    if(!parsed.records) parsed.records=[];
 if(!parsed.vault) parsed.vault=createFreshVault();
-if(!parsed.vaultEarned) parsed.vaultEarned=createFreshVaultEarned();
 return parsed;
   }catch(e){
     return freshState();
@@ -1060,17 +1037,16 @@ function getCheckScrollTop(){
   return sc ? sc.scrollTop : 0;
 }
 
-function toggleVow(i){  if(!requirePower()) return;
+function toggleVow(i){
+  if(!requirePower()) return;
 
   let scrollTop=getCheckScrollTop();
-  let todaysVows=getTodaysVows();
   let vowState=getVowStateForToday();
   let wasChecked=vowState[i];
 
   vowState[i]=!vowState[i];
 
   if(!wasChecked){
-    addVaultCoinOnce(todaysVows[i],i);
     playVowNote(i);
   }else{
     play("reset");
@@ -1092,6 +1068,18 @@ function toggleDamage(i){
   }
   showCheck(scrollTop);
 }
+function mintVaultCoinsForToday(){
+  ensureVault();
+
+  let todaysVows=getTodaysVows();
+  let vowState=getVowStateForToday();
+
+  for(let i=0;i<todaysVows.length;i++){
+    if(vowState[i]){
+      state.vault[todaysVows[i]]++;
+    }
+  }
+}
 function lockDay(){
   if(!requirePower()) return;
   stopPet();
@@ -1105,6 +1093,7 @@ function lockDay(){
     if(state.damage[todayIndex][i]) passed=false;
   }
   state.statuses[todayIndex]=passed ? "complete" : "failed";
+mintVaultCoinsForToday();
   let newRecord=false;
   let newAchievement=false;
   if(passed){
