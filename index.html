@@ -64,6 +64,23 @@ body{margin:0;height:100vh;background:#111;display:flex;justify-content:center;a
 .box.checked{background:#111;}
 .note{font-size:22px;line-height:1.05;margin-bottom:12px;padding-bottom:8px;border-bottom:2px dotted #111;}
 .small-note{font-size:19px;opacity:.85;margin:4px 0 10px;text-align:center;}
+.save-textarea{
+  width:100%;
+  height:120px;
+  box-sizing:border-box;
+  border:3px solid #111;
+  background:#f8f8f8;
+  font-family:'VT323',monospace;
+  font-size:18px;
+  line-height:1;
+  padding:8px;
+  resize:none;
+}
+.save-message{
+  font-size:21px;
+  text-align:center;
+  margin:8px 0;
+}
 .gallery-wrap{width:100%;height:100%;display:flex;flex-direction:column;background:#f8f8f8;}
 .gallery-title{text-align:center;font-size:21px;padding:5px 0;border-bottom:4px solid #111;flex-shrink:0;white-space:nowrap;overflow:hidden;}
 .gallery-tab{cursor:pointer;}
@@ -929,20 +946,28 @@ function showCode(){
     html+="<div class='note'>"+codeNotes[i]+"</div>";
   }
 
-  html+="<div class='section-label'>INSTRUCTION MANUAL</div>";
-  html+="<div class='small-note'>WIN AND FAIL CONDITIONS</div>";
+html+="<div class='section-label'>INSTRUCTION MANUAL</div>";
+html+="<div class='small-note'>WIN AND FAIL CONDITIONS</div>";
 
-  for(let i=0;i<manualNotes.length;i++){
-    html+="<div class='note'>";
-    html+="<div style='font-size:24px;margin-bottom:4px;'>"+manualNotes[i][0]+"</div>";
-    html+="<div style='font-size:20px;opacity:.9;'>"+manualNotes[i][1]+"</div>";
-    html+="</div>";
-  }
-
+for(let i=0;i<manualNotes.length;i++){
+  html+="<div class='note'>";
+  html+="<div style='font-size:24px;margin-bottom:4px;'>"+manualNotes[i][0]+"</div>";
+  html+="<div style='font-size:20px;opacity:.9;'>"+manualNotes[i][1]+"</div>";
   html+="</div>";
+}
 
-  html+="<div class='panel-buttons'>";
-  html+="<button class='mini-btn' onclick='showMain()'>BACK</button>";
+html+="<div class='section-label'>SAVE DATA</div>";
+html+="<div class='small-note'>BACK UP OR RESTORE YOUR KNIGHT</div>";
+
+html+="<div class='panel-buttons' style='border-top:none;padding:4px 0 10px;'>";
+html+="<button class='mini-btn' onclick='copySaveData()'>COPY SAVE</button>";
+html+="<button class='mini-btn' onclick='showImportSave()'>RESTORE</button>";
+html+="</div>";
+
+html+="</div>";
+
+html+="<div class='panel-buttons'>";
+html+="<button class='mini-btn' onclick='showMain()'>BACK</button>";
   html+="</div>";
 
   html+="</div>";
@@ -1195,6 +1220,110 @@ petHTML(petType)+
   startPet();
   if(shouldPlayFirework) setTimeout(()=>startFirework(),450);
   if(newRecord && newAchievement) setTimeout(()=>showAchievementBanner(state.streak),650);
+}
+function makeSaveData(){
+  return JSON.stringify({
+    kaizenKnightSave:true,
+    exportedAt:new Date().toISOString(),
+    state:state
+  });
+}
+
+function copySaveData(){
+  if(!requirePower()) return;
+
+  const saveText=makeSaveData();
+
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(saveText).then(()=>{
+      play("good");
+      document.getElementById("statusBar").innerHTML="SAVE COPIED";
+    }).catch(()=>{
+      showExportSave(saveText);
+    });
+  }else{
+    showExportSave(saveText);
+  }
+}
+
+function showExportSave(saveText){
+  stopPet();
+  stopFirework();
+
+  document.getElementById("playArea").innerHTML=
+    "<div class='panel'>"+
+    "<div class='panel-title'>COPY SAVE</div>"+
+    "<div class='scroll'>"+
+    "<div class='save-message'>COPY THIS TEXT INTO NOTES</div>"+
+    "<textarea class='save-textarea' id='exportBox' readonly></textarea>"+
+    "</div>"+
+    "<div class='panel-buttons'>"+
+    "<button class='mini-btn' onclick='showCode()'>BACK</button>"+
+    "</div>"+
+    "</div>";
+
+  const box=document.getElementById("exportBox");
+  box.value=saveText;
+  box.focus();
+  box.select();
+}
+
+function showImportSave(){
+  if(!requirePower()) return;
+
+  play("menu");
+  stopPet();
+  stopFirework();
+
+  document.getElementById("playArea").innerHTML=
+    "<div class='panel'>"+
+    "<div class='panel-title'>RESTORE SAVE</div>"+
+    "<div class='scroll'>"+
+    "<div class='save-message'>PASTE SAVE TEXT BELOW</div>"+
+    "<textarea class='save-textarea' id='importBox'></textarea>"+
+    "<div class='small-note'>RESTORE WILL REPLACE CURRENT DATA</div>"+
+    "</div>"+
+    "<div class='panel-buttons'>"+
+    "<button class='mini-btn' onclick='restoreSaveData()'>RESTORE</button>"+
+    "<button class='mini-btn' onclick='showCode()'>BACK</button>"+
+    "</div>"+
+    "</div>";
+}
+
+function restoreSaveData(){
+  const box=document.getElementById("importBox");
+
+  if(!box) return;
+
+  try{
+    const parsed=JSON.parse(box.value.trim());
+    const imported=parsed.state ? parsed.state : parsed;
+
+    if(!imported.statuses || typeof imported.streak!=="number"){
+      throw new Error("Invalid save");
+    }
+
+    state=imported;
+
+    if(!state.achievements) state.achievements={};
+    if(!state.records) state.records=[];
+    if(!state.vault) state.vault=createFreshVault();
+
+    ensureVault();
+    saveState();
+
+    play("good");
+
+    document.getElementById("statusBar").innerHTML="SAVE RESTORED";
+
+    setTimeout(()=>{ location.reload(); },450);
+
+  }catch(e){
+
+    play("fail");
+
+    document.getElementById("statusBar").innerHTML="RESTORE FAILED";
+  }
 }
 rollRainbowForToday();
 buildSounds();
