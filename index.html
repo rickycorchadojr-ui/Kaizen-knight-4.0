@@ -37,8 +37,8 @@ body{margin:0;height:100vh;background:#111;display:flex;justify-content:center;a
 .status-bar{height:38px;border-bottom:4px solid #111;display:flex;justify-content:center;align-items:center;font-size:24px;letter-spacing:2px;flex-shrink:0;}
 .off .status-bar,.boot-dark .status-bar{color:#e9ecd8;border-bottom:4px solid #e9ecd8;}
 .play-area{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center;box-sizing:border-box;overflow:hidden;position:relative;}
-.scene-bg{position:absolute;left:50%;bottom:88px;width:320px;height:auto;transform:translateX(-50%);object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;z-index:1;pointer-events:none;}
-.halloween-overlay{position:absolute;left:50%;bottom:88px;width:320px;height:auto;transform:translateX(-50%);object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;z-index:1;pointer-events:none;}
+.scene-bg{position:absolute;left:50%;bottom:78px;width:320px;height:auto;transform:translateX(-50%);object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;z-index:1;pointer-events:none;}
+.halloween-overlay{position:absolute;left:50%;bottom:78px;width:320px;height:auto;transform:translateX(-50%);object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;z-index:1;pointer-events:none;}
 .rainbow-overlay{position:absolute;left:50%;top:0px;width:320px;height:auto;transform:translateX(-50%);object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;z-index:2;pointer-events:none;}
 .crack-overlay{position:absolute;left:50%;top:0px;width:320px;height:auto;transform:translateX(-50%);object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;z-index:2;pointer-events:none;}
 .sky-object{
@@ -246,7 +246,7 @@ const sundayVows=[
   "DRILLS"
 ];
 const damageStates=[
-  "SPIRALED AFTER LOSS",
+  "SPIRALED AFTER LOSS / DON'T GET EMOTIONAL",
   "TRADED OUTSIDE ROUTINE",
   "RISK SETTINGS REMOVED",
   "BOUGHT / RESET COMBINE"
@@ -271,12 +271,12 @@ const manualNotes=[
   ["JOURNAL BOTH ACCOUNTS","WIN: BOTH REVIEWED. FAIL: LEFT UNWRITTEN."],
   ["IF STOP HIT, NO TRADING SECOND ACCOUNT","WIN: STOP MEANS DONE. FAIL: SWITCHED ACCOUNTS."],
   ["DRILLS","WIN: PRACTICE DONE. FAIL: SKIPPED."],
-  ["SPIRALED AFTER LOSS","DAMAGE: LOSS CAUSED LOSS OF CONTROL."],
+  ["SPIRALED AFTER LOSS / DON'T GET EMOTIONAL","DAMAGE: UNCHARACTERISTICALLY EMOTIONAL."],
   ["TRADED OUTSIDE ROUTINE","DAMAGE: TRADED WITHOUT RITUAL."],
   ["RISK SETTINGS REMOVED","DAMAGE: SAFETY WAS UNLOCKED."],
   ["BOUGHT / RESET COMBINE","DAMAGE: PAID TO CONTINUE THE LOOP."]
 ];
-const APP_VERSION="5.4.2";
+const APP_VERSION="5.4.3";
 const days=["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"];
 let todayIndex=getTradingDayIndex();
 let weekKey=getWeekKey();
@@ -458,6 +458,15 @@ function formatToday(){
   const now=new Date();
   const months=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
   return months[now.getMonth()]+" "+now.getDate()+" "+now.getFullYear();
+}
+function formatWeekDisplay(){
+  const d=new Date(weekKey+"T00:00:00");
+
+  return (
+    (d.getMonth()+1)+"/"+
+    d.getDate()+"/"+
+    d.getFullYear()
+  );
 }
 function ensureAchievementArchive(){
   if(!state.achievements) state.achievements={};
@@ -1032,7 +1041,7 @@ function showMain(fromBoot=false){
   renderDays();
   ensureAchievementArchive();
   document.getElementById("screen").className="screen";
-let weekText="WEEK OF "+weekKey;
+let weekText="WEEK OF "+formatWeekDisplay();
 let status="REST DAY";
   let petType="knight";
   if(shouldShowFinalForm()){
