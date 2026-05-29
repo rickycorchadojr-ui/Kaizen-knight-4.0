@@ -180,6 +180,11 @@ transform:scaleX(-1);
 #day4{background:#2253A0;}
 #day5{background:#2253A0;}
 .day.complete{background:#111;color:white;}
+
+.day.recovery{
+  background:#346245;
+  color:white;
+}
 .day.failed{text-decoration:line-through;}
 .day.today{outline:4px solid #111;}
 .day.inactive{opacity:.55;}
@@ -251,6 +256,61 @@ const damageStates=[
   "RISK SETTINGS REMOVED",
   "BOUGHT / RESET COMBINE"
 ];
+const gateQuestions=[
+  "SLEPT ENOUGH TO THINK CLEARLY",
+  "JOURNALS READY",
+  "MEDITATED OR GROUNDED",
+  "NOT RUSHING",
+  "NOT EMOTIONALLY AGITATED",
+  "NOT TRYING TO RECOVER LOSSES",
+  "NO 'I NEED THIS' FEELING",
+  "NO VOICE SAYING DON'T TRADE",
+  "RISK SETTINGS CAN BE LOCKED BEFORE CHARTS",
+  "PREPARED TO ACCEPT A RED DAY",
+  "PREPARED TO STOP EARLY",
+  "NO URGE TO SIZE UP",
+  "NO URGE TO TEST DISCIPLINE",
+  "CAN TRADE WITHOUT YELLING OR PLEADING",
+  "WILL JOURNAL BOTH ACCOUNTS",
+  "WILL RECORD SESSION",
+  "CAN WALK AWAY IF COMPROMISED"
+];
+
+const GATE_FAIL_LIMIT=3;
+const recoveryVows=[
+  "LOCK BOTH ACCOUNTS",
+  "NO CHARTS",
+  "NO BROKER",
+  "WALK OUTSIDE",
+  "STRETCH OR MOBILITY",
+  "HYDRATE",
+  "EAT REAL FOOD",
+  "JOURNAL STATE",
+  "REVIEW LESSON CALMLY",
+  "VISUALIZE TOMORROW",
+  "PREPARE NOTEBOOKS",
+  "EARLY SLEEP PREP"
+];
+
+const recoveryDamageStates=[
+  "CHECKED CHARTS",
+  "OPENED BROKER",
+  "TRADED ANYWAY",
+  "SKIPPED ACCOUNT LOCK",
+  "SPIRALED / SELF ATTACKED"
+];
+const damageProtocolVows=[
+  "LOCK BOTH ACCOUNTS",
+  "NO CHARTS",
+  "NO BROKER",
+  "WRITE WHAT HAPPENED",
+  "NAME THE TRIGGER",
+  "WALK OUTSIDE",
+  "DRINK WATER",
+  "NO SELF ATTACK",
+  "RESET ROOM / BODY",
+  "PLAN REPAIR STEP"
+];
 const codeNotes=[
   "CONSIDER STOPPING AT -250.",
   "LOOK FOR CHOP AND MANIPULATION.",
@@ -276,7 +336,7 @@ const manualNotes=[
   ["RISK SETTINGS REMOVED","DAMAGE: SAFETY WAS UNLOCKED."],
   ["BOUGHT / RESET COMBINE","DAMAGE: PAID TO CONTINUE THE LOOP."]
 ];
-const APP_VERSION="6.0.1";
+const APP_VERSION="6.0.2";
 const DEBUG_MODE=false;
 const days=["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"];
 let todayIndex=getTradingDayIndex();
@@ -736,6 +796,16 @@ function vaultCoinsHTML(count){
 function freshState(){
   return{
     weekKey:weekKey,
+
+   // DAILY MODE SYSTEM
+modeDate:getDayKey(),
+dayMode:"undecided",
+gateCompleted:false,
+gatePassed:false,
+recoveryChosen:false,
+damageProtocolActive:false,
+gateAnswers:Array(gateQuestions.length).fill(false),
+
 streak:0,
 bestStreak:0,
 rainbowDayKey:null,
@@ -748,9 +818,13 @@ vault:createFreshVault(),
 statuses:["inactive","inactive","inactive","inactive","inactive","inactive"],
     sundayVows:Array(sundayVows.length).fill(false),
     weekdayVows:Array.from({length:6},()=>Array(weekdayVows.length).fill(false)),
-    damage:Array.from({length:6},()=>Array(damageStates.length).fill(false))
+    damage:Array.from({length:6},()=>Array(damageStates.length).fill(false)),
+recoveryVows:Array.from({length:6},()=>Array(recoveryVows.length).fill(false)),
+recoveryDamage:Array.from({length:6},()=>Array(recoveryDamageStates.length).fill(false)),
+damageProtocolVows:Array.from({length:6},()=>Array(damageProtocolVows.length).fill(false))
   };
 }
+
 function loadState(){
   let saved=localStorage.getItem("kaizenKnightV5");
   if(!saved) return freshState();
@@ -768,12 +842,34 @@ return newState;
     if(!parsed.sundayVows || parsed.sundayVows.length!==sundayVows.length) return freshState();
     if(!parsed.weekdayVows || parsed.weekdayVows[1].length!==weekdayVows.length) return freshState();
     if(!parsed.damage || parsed.damage[0].length!==damageStates.length) return freshState();
+if(!parsed.recoveryVows || parsed.recoveryVows.length!==6 || parsed.recoveryVows[0].length!==recoveryVows.length){
+  parsed.recoveryVows=Array.from({length:6},()=>Array(recoveryVows.length).fill(false));
+}
+
+if(!parsed.recoveryDamage || parsed.recoveryDamage.length!==6 || parsed.recoveryDamage[0].length!==recoveryDamageStates.length){
+  parsed.recoveryDamage=Array.from({length:6},()=>Array(recoveryDamageStates.length).fill(false));
+}
     if(typeof parsed.streak!=="number") parsed.streak=cleanCountFromStatuses(parsed.statuses);
     if(typeof parsed.bestStreak!=="number") parsed.bestStreak=parsed.streak;
 if(typeof parsed.finalForm==="undefined") parsed.finalForm=null;
 if(typeof parsed.rainbowDayKey==="undefined") parsed.rainbowDayKey=null;
 if(typeof parsed.rainbowToday==="undefined") parsed.rainbowToday=false;
 if(typeof parsed.crackActive==="undefined") parsed.crackActive=false;
+
+// DAILY MODE SYSTEM MIGRATION
+if(typeof parsed.modeDate==="undefined") parsed.modeDate=getDayKey();
+if(typeof parsed.dayMode==="undefined") parsed.dayMode="undecided";
+if(typeof parsed.gateCompleted==="undefined") parsed.gateCompleted=false;
+if(typeof parsed.gatePassed==="undefined") parsed.gatePassed=false;
+if(typeof parsed.recoveryChosen==="undefined") parsed.recoveryChosen=false;
+if(typeof parsed.damageProtocolActive==="undefined") parsed.damageProtocolActive=false;
+if(!parsed.gateAnswers || parsed.gateAnswers.length!==gateQuestions.length){
+  parsed.gateAnswers=Array(gateQuestions.length).fill(false);
+}
+if(!parsed.damageProtocolVows || parsed.damageProtocolVows.length!==6 || parsed.damageProtocolVows[0].length!==damageProtocolVows.length){
+  parsed.damageProtocolVows=Array.from({length:6},()=>Array(damageProtocolVows.length).fill(false));
+}
+
 if(!parsed.achievements) parsed.achievements={};
    if(!parsed.records) parsed.records=[];
 if(!parsed.vault) parsed.vault=createFreshVault();
@@ -783,6 +879,21 @@ return parsed;
   }
 }
 function saveState(){ localStorage.setItem("kaizenKnightV5",JSON.stringify(state)); }
+function ensureDailyModeFresh(){
+  const todayKey=getDayKey();
+
+  if(state.modeDate===todayKey) return;
+
+  state.modeDate=todayKey;
+  state.dayMode="undecided";
+  state.gateCompleted=false;
+  state.gatePassed=false;
+  state.recoveryChosen=false;
+  state.damageProtocolActive=false;
+  state.gateAnswers=Array(gateQuestions.length).fill(false);
+state.damageProtocolVows=Array.from({length:6},()=>Array(damageProtocolVows.length).fill(false));
+  saveState();
+}
 function cleanCountFromStatuses(statuses){
   if(!statuses) return 0;
   return statuses.filter(s=>s==="complete").length;
@@ -1027,7 +1138,9 @@ function renderDays(){
   for(let i=0;i<6;i++){
     let el=document.getElementById("day"+i);
     el.className="day";
+
     if(state.statuses[i]==="complete") el.classList.add("complete");
+    if(state.statuses[i]==="recovery") el.classList.add("recovery");
     if(state.statuses[i]==="failed") el.classList.add("failed");
     if(state.statuses[i]==="inactive") el.classList.add("inactive");
     if(i===todayIndex) el.classList.add("today");
@@ -1035,7 +1148,15 @@ function renderDays(){
 }
 function cleanCount(){ return state.statuses.filter(s=>s==="complete").length; }
 function failedCount(){ return state.statuses.filter(s=>s==="failed").length; }
-function perfectWeek(){ return cleanCount()===6 && failedCount()===0; }
+function perfectWeek(){
+  for(let i=0;i<6;i++){
+    if(state.statuses[i]!=="complete" && state.statuses[i]!=="recovery"){
+      return false;
+    }
+  }
+
+  return failedCount()===0;
+}
 function weeklyVowPercent(){
   let checked=0;
   let total=0;
@@ -1122,16 +1243,83 @@ function powerOn(){
 
   showBoot();
 }
+function showMorningGate(){
+  if(!requirePower()) return;
+
+  stopPet();
+  stopFirework();
+  renderDays();
+
+  document.getElementById("statusBar").innerHTML="MORNING GATE";
+
+  let html="";
+  html+="<div class='panel'>";
+  html+="<div class='panel-title'>CAN YOU TRADE?</div>";
+  html+="<div class='scroll' style='display:flex;flex-direction:column;justify-content:center;gap:10px;'>";
+
+  html+="<div class='panel-buttons' style='border-top:none;padding:0;'>";
+  html+="<button class='mini-btn' onclick='chooseTradeDay()'>TRADE</button>";
+  html+="<button class='mini-btn' onclick='chooseSundayDay()'>SUNDAY</button>";
+  html+="</div>";
+
+  html+="<button class='mini-btn' onclick='chooseRecoveryDay()'>RECOVERY DAY</button>";
+  html+="<button class='mini-btn' onclick='chooseDamageDay()'>DAMAGE</button>";
+
+  html+="<div class='small-note'>COMPROMISED MINDS DO NOT GET MARKET ACCESS.</div>";
+
+  html+="</div>";
+  html+="</div>";
+
+  document.getElementById("playArea").innerHTML=html;
+}
+function chooseTradeDay(){
+  play("menu");
+  showTradeGateTest();
+}
+
+function chooseSundayDay(){
+  play("menu");
+  state.dayMode="sunday";
+  state.gateCompleted=true;
+  saveState();
+  showMain();
+}
+
+function chooseRecoveryDay(){
+  play("good");
+  state.dayMode="recovery";
+  state.gateCompleted=true;
+  state.recoveryChosen=true;
+  saveState();
+  showMain();
+}
+
+function chooseDamageDay(){
+  play("fail");
+  state.dayMode="damage";
+  state.gateCompleted=true;
+  state.damageProtocolActive=true;
+  saveState();
+  showDamageProtocol();
+}
+function showHomeAfterBoot(fromBoot=false){
+  if(todayIndex>=0 && state.dayMode==="undecided"){
+    showMorningGate();
+    return;
+  }
+
+  showMain(fromBoot);
+}
 function showBoot(){
   renderDays();
   document.getElementById("screen").className="screen boot-dark";
   document.getElementById("statusBar").innerHTML="POWER";
   document.getElementById("playArea").innerHTML="<div class='boot-text'>BOOTING...</div>";
  setTimeout(()=>{ document.getElementById("statusBar").innerHTML="POWER"; },650);
-  setTimeout(()=>{
-    document.getElementById("screen").className="screen";
-    showMain(true);
-  },1200);
+setTimeout(()=>{
+  document.getElementById("screen").className="screen";
+  showHomeAfterBoot(true);
+},1200);
 }
 function debugAddStreak(){
   if(!DEBUG_MODE) return;
@@ -1237,10 +1425,186 @@ html+="<button class='mini-btn' onclick='lockDay()'>LOCK</button>";
     if(sc) sc.scrollTop=restoreScroll;
   }
 }
-function showCheckWithMenuSound(){
+
+function showRecoveryCheck(restoreScroll=null){
   if(!requirePower()) return;
-  play("menu");
+  if(todayIndex<0){
+    showMain();
+    return;
+  }
+
+  stopPet();
+  stopFirework();
+
+  document.getElementById("statusBar").innerHTML="RECOVERY";
+
+  let html="";
+  html+="<div class='panel'>";
+  html+="<div class='panel-title'>RECOVERY DAY</div>";
+  html+="<div class='scroll' id='recoveryScroll'>";
+  html+="<div class='small-note'>RECOVERY IS TRAINING. RESTORE READINESS.</div>";
+
+  html+="<div class='section-label'>VOWS</div>";
+  for(let i=0;i<recoveryVows.length;i++){
+    html+="<div class='rule'>";
+    html+="<div class='box "+(state.recoveryVows[todayIndex][i]?"checked":"")+"' onclick='toggleRecoveryVow("+i+")'></div>";
+    html+="<div>"+recoveryVows[i]+"</div>";
+    html+="</div>";
+  }
+
+  html+="<div class='section-label'>DAMAGE</div>";
+  html+="<div class='small-note'>ONLY MARK IF RECOVERY CONTAINMENT BROKE</div>";
+  for(let i=0;i<recoveryDamageStates.length;i++){
+    html+="<div class='rule'>";
+    html+="<div class='box "+(state.recoveryDamage[todayIndex][i]?"checked":"")+"' onclick='toggleRecoveryDamage("+i+")'></div>";
+    html+="<div>"+recoveryDamageStates[i]+"</div>";
+    html+="</div>";
+  }
+
+  html+="</div>";
+  html+="<div class='panel-buttons'>";
+  html+="<button class='mini-btn' onclick='showMain()'>BACK</button>";
+  html+="<button class='mini-btn' onclick='lockDay()'>LOCK</button>";
+  html+="</div>";
+  html+="</div>";
+
+  document.getElementById("playArea").innerHTML=html;
+
+  if(restoreScroll!==null){
+    const sc=document.getElementById("recoveryScroll");
+    if(sc) sc.scrollTop=restoreScroll;
+  }
+}
+
+function getRecoveryScrollTop(){
+  const sc=document.getElementById("recoveryScroll");
+  return sc ? sc.scrollTop : 0;
+}
+
+function toggleRecoveryVow(i){
+  if(!requirePower()) return;
+
+  let scrollTop=getRecoveryScrollTop();
+  let wasChecked=state.recoveryVows[todayIndex][i];
+
+  state.recoveryVows[todayIndex][i]=!wasChecked;
+
+  if(!wasChecked){
+    playVowNote(i);
+  }else{
+    play("reset");
+  }
+
+  saveState();
+  showRecoveryCheck(scrollTop);
+}
+
+function toggleRecoveryDamage(i){
+  if(!requirePower()) return;
+
+  let scrollTop=getRecoveryScrollTop();
+  let wasChecked=state.recoveryDamage[todayIndex][i];
+
+  state.recoveryDamage[todayIndex][i]=!wasChecked;
+
+  if(!wasChecked){
+    state.crackActive=true;
+    playDamageNote();
+  }else{
+    play("reset");
+  }
+
+  saveState();
+  showRecoveryCheck(scrollTop);
+}
+
+function showDamageProtocol(restoreScroll=null){
+  if(!requirePower()) return;
+  if(todayIndex<0){
+    showMain();
+    return;
+  }
+
+  stopPet();
+  stopFirework();
+  document.getElementById("statusBar").innerHTML="CONTAINMENT";
+
+  let html="";
+  html+="<div class='panel'>";
+  html+="<div class='panel-title'>DAMAGE PROTOCOL</div>";
+  html+="<div class='scroll' id='damageProtocolScroll'>";
+  html+="<div class='small-note'>STOP ESCALATION. REPAIR THE SYSTEM.</div>";
+
+  for(let i=0;i<damageProtocolVows.length;i++){
+    html+="<div class='rule'>";
+    html+="<div class='box "+(state.damageProtocolVows[todayIndex][i]?"checked":"")+"' onclick='toggleDamageProtocolVow("+i+")'></div>";
+    html+="<div>"+damageProtocolVows[i]+"</div>";
+    html+="</div>";
+  }
+
+  html+="</div>";
+  html+="<div class='panel-buttons'>";
+  html+="<button class='mini-btn' onclick='showMain()'>BACK</button>";
+  html+="<button class='mini-btn' onclick='lockDay()'>LOCK</button>";
+  html+="</div>";
+  html+="</div>";
+
+  document.getElementById("playArea").innerHTML=html;
+
+  if(restoreScroll!==null){
+    const sc=document.getElementById("damageProtocolScroll");
+    if(sc) sc.scrollTop=restoreScroll;
+  }
+}
+
+function getDamageProtocolScrollTop(){
+  const sc=document.getElementById("damageProtocolScroll");
+  return sc ? sc.scrollTop : 0;
+}
+
+function toggleDamageProtocolVow(i){
+  if(!requirePower()) return;
+
+  let scrollTop=getDamageProtocolScrollTop();
+  let wasChecked=state.damageProtocolVows[todayIndex][i];
+
+  state.damageProtocolVows[todayIndex][i]=!wasChecked;
+
+  if(!wasChecked){
+    playVowNote(i);
+  }else{
+    play("reset");
+  }
+
+  saveState();
+  showDamageProtocol(scrollTop);
+}
+
+function showCheckRouter(){
+  if(!requirePower()) return;
+
+  if(state.dayMode==="gate_failed"){
+    showGateFailedScreen();
+    return;
+  }
+
+  if(state.dayMode==="recovery"){
+    showRecoveryCheck();
+    return;
+  }
+
+  if(state.dayMode==="damage"){
+    showDamageProtocol();
+    return;
+  }
+
   showCheck();
+}
+
+function showCheckWithMenuSound(){
+ if(!requirePower()) return;
+  play("menu");
+  showCheckRouter();
 }
 function showCode(){
   if(!requirePower()) return;
@@ -1284,6 +1648,125 @@ html+="<button class='mini-btn' onclick='showMain()'>BACK</button>";
   html+="</div>";
 
   document.getElementById("playArea").innerHTML=html;
+}
+function showTradeGateTest(){
+  if(!requirePower()) return;
+
+  stopPet();
+  stopFirework();
+  renderDays();
+
+  document.getElementById("statusBar").innerHTML="STATE CHECK";
+
+  let html="";
+  html+="<div class='panel'>";
+  html+="<div class='panel-title'>TRADE CLEARANCE</div>";
+  html+="<div class='scroll' id='gateScroll'>";
+  html+="<div class='small-note'>CHECK WHAT IS TRUE BEFORE MARKET ACCESS</div>";
+
+  for(let i=0;i<gateQuestions.length;i++){
+    html+="<div class='rule'>";
+    html+="<div class='box "+(state.gateAnswers[i]?"checked":"")+"' onclick='toggleGateAnswer("+i+")'></div>";
+    html+="<div>"+gateQuestions[i]+"</div>";
+    html+="</div>";
+  }
+
+  html+="</div>";
+  html+="<div class='panel-buttons'>";
+  html+="<button class='mini-btn' onclick='showMorningGate()'>BACK</button>";
+  html+="<button class='mini-btn' onclick='submitGateTest()'>SUBMIT</button>";
+  html+="</div>";
+  html+="</div>";
+
+  document.getElementById("playArea").innerHTML=html;
+}
+
+function toggleGateAnswer(i){
+  if(!requirePower()) return;
+
+  const sc=document.getElementById("gateScroll");
+  const scrollTop=sc ? sc.scrollTop : 0;
+
+  state.gateAnswers[i]=!state.gateAnswers[i];
+
+  if(state.gateAnswers[i]){
+    playVowNote(i);
+  }else{
+    play("reset");
+  }
+
+  saveState();
+  showTradeGateTest();
+
+  const newSc=document.getElementById("gateScroll");
+  if(newSc) newSc.scrollTop=scrollTop;
+}
+
+function submitGateTest(){
+  if(!requirePower()) return;
+
+  let missed=0;
+
+  for(let i=0;i<state.gateAnswers.length;i++){
+    if(!state.gateAnswers[i]) missed++;
+  }
+
+  state.gateCompleted=true;
+
+  if(missed>=GATE_FAIL_LIMIT){
+    state.dayMode="gate_failed";
+    state.gatePassed=false;
+    saveState();
+    play("fail");
+    showGateFailedScreen();
+    return;
+  }
+
+  state.dayMode="trade";
+  state.gatePassed=true;
+  saveState();
+  play("good");
+  showGatePassedScreen();
+}
+
+function showGatePassedScreen(){
+  document.getElementById("statusBar").innerHTML="CLEARED";
+  document.getElementById("playArea").innerHTML=
+    "<div class='panel'>"+
+    "<div class='panel-title'>MENTAL STATE: STABLE</div>"+
+    "<div class='scroll' style='display:flex;align-items:center;justify-content:center;text-align:center;font-size:28px;line-height:1.05;'>GOOD LUCK</div>"+
+    "</div>";
+
+  setTimeout(()=>showMain(true),1200);
+}
+
+function showGateFailedScreen(){
+  document.getElementById("statusBar").innerHTML="ACCESS DENIED";
+  document.getElementById("playArea").innerHTML=
+    "<div class='panel'>"+
+    "<div class='panel-title'>WARNING</div>"+
+    "<div class='scroll' style='display:flex;align-items:center;justify-content:center;text-align:center;font-size:28px;line-height:1.05;'>"+
+    "EMOTIONALLY COMPROMISED<br><br>DO. NOT. TRADE."+
+    "<br><br><span style='font-size:22px;'>CONVERT THIS DAY INTO RECOVERY.</span>"+
+    "</div>"+
+    "<div class='panel-buttons'>"+
+    "<button class='mini-btn' onclick='convertGateFailToRecovery()'>RECOVERY</button>"+
+    "<button class='mini-btn' onclick='showMain()'>BACK</button>"+
+    "</div>"+
+    "</div>";
+}
+function convertGateFailToRecovery(){
+  if(!requirePower()) return;
+
+  play("good");
+
+  state.dayMode="recovery";
+  state.gateCompleted=true;
+  state.gatePassed=false;
+  state.recoveryChosen=true;
+
+  saveState();
+  showRecoveryCheck();
 }
 function showGallery(mode="trophies"){
   if(!requirePower()) return;
@@ -1460,45 +1943,78 @@ function lockDay(){
 
   stopPet();
   stopFirework();
+
   let passed=true;
   let vowState=getVowStateForToday();
+
+  if(state.dayMode==="recovery"){
+    vowState=state.recoveryVows[todayIndex];
+  }
+
   for(let i=0;i<vowState.length;i++){
     if(!vowState[i]) passed=false;
   }
-  for(let i=0;i<damageStates.length;i++){
-    if(state.damage[todayIndex][i]) passed=false;
+
+  if(state.dayMode==="recovery"){
+    for(let i=0;i<recoveryDamageStates.length;i++){
+      if(state.recoveryDamage[todayIndex][i]) passed=false;
+    }
+}else if(state.dayMode==="damage"){
+  passed=false;
+}else{
+    for(let i=0;i<damageStates.length;i++){
+      if(state.damage[todayIndex][i]) passed=false;
+    }
   }
-state.statuses[todayIndex]=passed ? "complete" : "failed";
-mintVaultCoinsForToday();
+
+if(state.dayMode==="recovery" && passed){
+  state.statuses[todayIndex]="recovery";
+}else{
+  state.statuses[todayIndex]=passed ? "complete" : "failed";
+}
+
+  if(state.dayMode!=="recovery" && state.dayMode!=="damage"){
+    mintVaultCoinsForToday();
+  }
+
   let newRecord=false;
   let newAchievement=false;
+
 if(passed){
   state.crackActive=false;
-  state.streak++;
 
-  if(recordAchievement(state.streak)){
-    newAchievement=true;
-  }
+  if(state.dayMode!=="recovery"){
+    state.streak++;
 
-  if(state.streak>state.bestStreak && state.streak<=365){
-    state.bestStreak=state.streak;
-    newRecord=true;
+    if(recordAchievement(state.streak)){
+      newAchievement=true;
+    }
+
+    if(state.streak>state.bestStreak && state.streak<=365){
+      state.bestStreak=state.streak;
+      newRecord=true;
+    }
   }
 }else{
   state.streak=0;
 }
+
   let shouldPlayFirework=passed && todayIndex===5 && perfectWeek();
   let weeklyForm=null;
+
   if(todayIndex===5){
     if(shouldPlayFirework){
       weeklyForm="angel";
     }else{
       weeklyForm=formFromWeeklyPercent(weeklyVowPercent());
     }
+
     state.finalForm=weeklyForm;
     addWeekRecord(weeklyForm);
   }
+
   saveState();
+
   if(shouldPlayFirework){
     play("perfectWeek");
   }else if(passed){
@@ -1506,13 +2022,28 @@ if(passed){
   }else{
     play("fail");
   }
+
   renderDays();
+
   let petType=passed ? "king" : "rook";
+
   if(todayIndex===5 && weeklyForm){
     petType=weeklyForm;
   }
+
   let sealText="DAY SEALED";
   let resultText=passed ? "INTEGRITY PRESERVED" : "INTEGRITY DAMAGED";
+
+  if(state.dayMode==="recovery"){
+    sealText="RECOVERY SEALED";
+    resultText=passed ? "READINESS RESTORED" : "RECOVERY DAMAGED";
+  }
+
+if(state.dayMode==="damage" && state.damageProtocolActive){
+  sealText="DAMAGE CONTAINED";
+  resultText="REPAIR PROTOCOL COMPLETE";
+}
+
   if(shouldPlayFirework){
     sealText="PERFECT WEEK!";
     resultText="INTEGRITY PRESERVED";
@@ -1520,33 +2051,32 @@ if(passed){
     sealText="WEEK FORM";
     resultText=weeklyVowPercent()+"% VOWS KEPT";
   }
+
   document.getElementById("playArea").innerHTML=
     achievementHTML()+
     streakHTML()+
-
-sceneBackgroundHTML()+
-
-seasonalOverlayHTML()+
-
-rainbowHTML()+
-
-crackHTML()+
-
-ufoHTML()+
-planeHTML()+
-petHTML(petType)+
-
+    sceneBackgroundHTML()+
+    seasonalOverlayHTML()+
+    rainbowHTML()+
+    crackHTML()+
+    ufoHTML()+
+    planeHTML()+
+    petHTML(petType)+
     "<div class='ground'></div>"+
     "<div class='textbox'>"+
     sealText+
     "<br>"+resultText+
     "</div>";
-startPet();
-startSkyAnimations();
-updateStreakMusic();
 
-if(shouldPlayFirework) setTimeout(()=>startFirework(),450);
-  if(newRecord && newAchievement) setTimeout(()=>showAchievementBanner(state.streak),650);
+  startPet();
+  startSkyAnimations();
+  updateStreakMusic();
+
+  if(shouldPlayFirework) setTimeout(()=>startFirework(),450);
+
+  if(newRecord && newAchievement){
+    setTimeout(()=>showAchievementBanner(state.streak),650);
+  }
 }
 function makeSaveData(){
   return JSON.stringify({
@@ -1658,6 +2188,7 @@ saveState();
     document.getElementById("statusBar").innerHTML="RESTORE FAILED";
   }
 }
+ensureDailyModeFresh();
 rollRainbowForToday();
 buildSounds();
 ensureAchievementArchive();
