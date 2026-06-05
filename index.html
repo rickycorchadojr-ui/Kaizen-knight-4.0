@@ -452,7 +452,7 @@ const powerQuotes=[
     weight:15
   }
 ];
-const APP_VERSION="7.8.4";
+const APP_VERSION="7.8.5";
 const DEBUG_MODE=false;
 const days=["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"];
 let todayIndex=getTradingDayIndex();
@@ -2153,10 +2153,10 @@ function trainingTrolleyHTML(){
 
   return ""+
     "<div class='trolley-scene'>"+
-    "<div class='trolley-home'>⌂</div>"+
+    "<div class='trolley-home'>🏠</div>"+
     "<div class='trolley-track'></div>"+
-    "<div class='trolley-castle'>♜</div>"+
-    "<div class='trolley-car' style='--trolley-left:"+left+"%;'>▣</div>"+
+    "<div class='trolley-castle'>🏰</div>"+
+    "<div class='trolley-car' style='--trolley-left:"+left+"%;'>🚋</div>"+
     "</div>";
 }
 
@@ -2259,7 +2259,6 @@ state.trainingPromotedToday=true;
   }
 
   saveState();
-
   if(promoted){
     play("resolve");
     showTrainingPromotion();
@@ -2268,6 +2267,8 @@ state.trainingPromotedToday=true;
 
   if(state.trainingCompleteToday && state.todayDrills===state.trainingTarget){
     play("good");
+    showTrainingComplete();
+    return;
   }else{
     playTrainingNote(state.todayDrills);
   }
@@ -2304,6 +2305,26 @@ function removeTrainingDrill(){
   play("reset");
   saveState();
   showTrain(false);
+}
+
+function showTrainingComplete(){
+  document.getElementById("statusBar").innerHTML="ARRIVED";
+
+  document.getElementById("playArea").innerHTML=
+    "<div class='panel'>"+
+    "<div class='panel-title'>TRAINING COMPLETE</div>"+
+    "<div class='scroll' style='display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;'>"+
+    "<div class='training-stat' style='border-bottom:none;'>"+
+    "<div style='font-size:25px;margin-bottom:14px;'>THE TROLLEY HAS</div>"+
+    "<div style='font-size:25px;margin-bottom:14px;'>REACHED THE CASTLE</div>"+
+    "<div style='font-size:42px;margin-bottom:12px;'>🚋 → 🏰</div>"+
+    "<div class='training-big'>"+getTrainingRankName()+"</div>"+
+    "</div>"+
+    "</div>"+
+    "<div class='panel-buttons'>"+
+    "<button class='mini-btn' onclick='showTrain()'>CONTINUE</button>"+
+    "</div>"+
+    "</div>";
 }
 
 function showTrainingPromotion(){
