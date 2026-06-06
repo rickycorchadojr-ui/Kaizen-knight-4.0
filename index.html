@@ -268,10 +268,27 @@ transform:scaleX(-1);
   top:30px;
   left:var(--trolley-left);
   transform:translateX(-50%);
-  font-size:30px;
-  line-height:1;
+  width:36px;
+  height:36px;
   transition:left .25s ease-out;
   z-index:2;
+}
+
+.trolley-img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+}
+
+.gate-img{
+  max-width:220px;
+  max-height:150px;
+  object-fit:contain;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
 }
 
 </style>
@@ -452,7 +469,7 @@ const powerQuotes=[
     weight:15
   }
 ];
-const APP_VERSION="7.8.5";
+const APP_VERSION="7.8.6";
 const DEBUG_MODE=false;
 const days=["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"];
 let todayIndex=getTradingDayIndex();
@@ -460,6 +477,7 @@ let weekKey=getWeekKey();
 let state=loadState();
 let moveTimer=null;
 let sleepTimer=null;
+let gateTimer=null;
 let sleepFrame=1;
 let petStep=0;
 let poweredOn=false;
@@ -1624,43 +1642,7 @@ function powerOn(){
   play("boot");
   showBoot();
 }
-function showMorningGate(){
-  if(!requirePower()) return;
 
-  stopPet();
-  stopFirework();
-  renderDays();
-
-  document.getElementById("statusBar").innerHTML="MORNING GATE";
-
-  let html="";
-  html+="<div class='panel'>";
-  html+="<div class='panel-title'>CAN YOU TRADE?</div>";
-
-  html+="<div class='scroll' style='display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:10px;text-align:center;'>";
-
-  html+="<div style='flex:1;display:flex;align-items:center;justify-content:center;width:100%;'>";
-  html+="<img src='gate.png' style='max-width:220px;max-height:150px;object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;'>";
-  html+="</div>";
-
-  html+="<div style='width:100%;display:flex;flex-direction:column;gap:8px;'>";
-
-  html+="<div class='panel-buttons' style='border-top:none;padding:0;'>";
-  html+="<button class='mini-btn' onclick='chooseTradeDay()'>TRADE</button>";
-  html+="<button class='mini-btn' onclick='chooseSundayDay()'>SUNDAY</button>";
-  html+="</div>";
-
-  html+="<button class='mini-btn' onclick='chooseRecoveryDay()'>RECOVERY DAY</button>";
-  html+="<button class='mini-btn' onclick='chooseDamageDay()'>DAMAGE</button>";
-
-  html+="<div class='small-note'>COMPROMISED MINDS DO NOT GET MARKET ACCESS.</div>";
-
-  html+="</div>";
-  html+="</div>";
-  html+="</div>";
-
-  document.getElementById("playArea").innerHTML=html;
-}
 function chooseTradeDay(){
   if(!confirm("BEGIN TRADE DAY?")) return;
 
@@ -2156,7 +2138,7 @@ function trainingTrolleyHTML(){
     "<div class='trolley-home'>🏠</div>"+
     "<div class='trolley-track'></div>"+
     "<div class='trolley-castle'>🏰</div>"+
-    "<div class='trolley-car' style='--trolley-left:"+left+"%;'>🚋</div>"+
+    "<div class='trolley-car' style='--trolley-left:"+left+"%;'><img class='trolley-img' src='trolley.png'></div>"+
     "</div>";
 }
 
@@ -2347,6 +2329,71 @@ function showTrainingPromotion(){
     "</div>";
 }
 
+function showMorningGate(){
+  if(!requirePower()) return;
+
+  stopPet();
+  stopFirework();
+  renderDays();
+
+  document.getElementById("statusBar").innerHTML="MORNING GATE";
+
+  let html="";
+  html+="<div class='panel'>";
+  html+="<div class='panel-title'>CAN YOU TRADE?</div>";
+
+  html+="<div class='scroll' style='display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:10px;text-align:center;'>";
+
+  html+="<div style='flex:1;display:flex;align-items:center;justify-content:center;width:100%;'>";
+  html+="<img id='gateImg' class='gate-img' src='gate1.png'>";
+  html+="</div>";
+
+  html+="<div style='width:100%;display:flex;flex-direction:column;gap:8px;'>";
+
+  html+="<div class='panel-buttons' style='border-top:none;padding:0;'>";
+  html+="<button class='mini-btn' onclick='chooseTradeDay()'>TRADE</button>";
+  html+="<button class='mini-btn' onclick='chooseSundayDay()'>SUNDAY</button>";
+  html+="</div>";
+
+  html+="<button class='mini-btn' onclick='chooseRecoveryDay()'>RECOVERY DAY</button>";
+  html+="<button class='mini-btn' onclick='chooseDamageDay()'>DAMAGE</button>";
+
+  html+="<div class='small-note'>COMPROMISED MINDS DO NOT GET MARKET ACCESS.</div>";
+
+  html+="</div>";
+  html+="</div>";
+  html+="</div>";
+
+  document.getElementById("playArea").innerHTML=html;
+
+  startGateAnimation();
+}
+
+function startGateAnimation(){
+
+  clearInterval(gateTimer);
+
+  const gate=document.getElementById("gateImg");
+  if(!gate) return;
+
+  let frame=1;
+
+  gateTimer=setInterval(()=>{
+
+    const currentGate=document.getElementById("gateImg");
+
+    if(!currentGate){
+      clearInterval(gateTimer);
+      gateTimer=null;
+      return;
+    }
+
+    frame=frame===1 ? 2 : 1;
+    currentGate.src="gate"+frame+".png";
+
+  },500);
+}
+
 function showCode(){
   if(!requirePower()) return;
   play("menu");
@@ -2365,10 +2412,11 @@ function showCode(){
     "<button class='mini-btn' onclick='showSaveCode()'>SAVE DATA</button>"+
     "</div>"+
     "<div class='panel-buttons'>"+
-    "<button class='mini-btn' onclick='showMain()'>BACK</button>"+
+    "<button class='mini-btn' onclick='showHomeAfterBoot()'>BACK</button>"+
     "</div>"+
     "</div>";
 }
+
 function showCoreCode(){
   document.getElementById("statusBar").innerHTML="CORE CODE";
   let html="<div class='panel'><div class='panel-title'>CORE CODE</div><div class='scroll'>";
