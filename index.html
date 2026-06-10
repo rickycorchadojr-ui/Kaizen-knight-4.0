@@ -437,6 +437,25 @@ const damageProtocolVows=[
   "RESET ROOM / BODY",
   "PLAN REPAIR STEP"
 ];
+const damageFailureTypes=[
+  "FATIGUE",
+  "RUSHING",
+  "FEAR",
+  "GREED",
+  "ANGER",
+  "DISTRACTION",
+  "ROUTINE FAILURE"
+];
+
+const damageRepairSteps=[
+  "SLEEP EARLIER",
+  "PREP NOTEBOOKS",
+  "LOCK ACCOUNTS",
+  "REDUCE SIZE",
+  "TAKE RECOVERY DAY",
+  "REVIEW JOURNALS",
+  "WALK BEFORE OPEN"
+];
 const codeNotes=[
   "KAIZEN KNIGHT EXISTS TO PRESERVE READINESS.",
   "INTEGRITY PROTECTS THE SYSTEM.",
@@ -684,7 +703,7 @@ const powerQuotes=[
   }
 ];
 
-const APP_VERSION="8.1.0";
+const APP_VERSION="8.1.1";
 const DEBUG_MODE=false;
 const days=["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"];
 let todayIndex=getTradingDayIndex();
@@ -1390,6 +1409,8 @@ gateCompleted:false,
 gatePassed:false,
 recoveryChosen:false,
 damageProtocolActive:false,
+damageFailure:null,
+damageRepair:null,
 gateAnswers:Array(gateQuestions.length).fill(false),
 readinessScore:null,
 readinessWeather:null,
@@ -1495,6 +1516,8 @@ if(typeof parsed.gateCompleted==="undefined") parsed.gateCompleted=false;
 if(typeof parsed.gatePassed==="undefined") parsed.gatePassed=false;
 if(typeof parsed.recoveryChosen==="undefined") parsed.recoveryChosen=false;
 if(typeof parsed.damageProtocolActive==="undefined") parsed.damageProtocolActive=false;
+if(typeof parsed.damageFailure==="undefined") parsed.damageFailure=null;
+if(typeof parsed.damageRepair==="undefined") parsed.damageRepair=null;
 if(!parsed.gateAnswers || parsed.gateAnswers.length!==gateQuestions.length){
   parsed.gateAnswers=Array(gateQuestions.length).fill(false);
 }
@@ -1530,8 +1553,10 @@ function ensureDailyModeFresh(){
   state.gateCompleted=false;
   state.gatePassed=false;
   state.recoveryChosen=false;
-  state.damageProtocolActive=false;
-  state.gateAnswers=Array(gateQuestions.length).fill(false);
+state.damageProtocolActive=false;
+state.damageFailure=null;
+state.damageRepair=null;
+state.gateAnswers=Array(gateQuestions.length).fill(false);
   state.readinessScore=null;
   state.readinessWeather=null;
   state.damageProtocolVows=Array.from({length:6},()=>Array(damageProtocolVows.length).fill(false));
@@ -1553,17 +1578,27 @@ function repairWeeklyStatusesFromChecklist(){
 
   for(let d=0;d<6;d++){
 
+    // IMPORTANT:
+    // If a day is still inactive, it means the day has not been locked yet.
+    // Partial checkmarks during an active day must stay partial.
+    // Restore should never convert an unfinished day into a failed day.
+    if(state.statuses[d]==="inactive"){
+      continue;
+    }
+
+    // Recovery days are intentionally awarded/marked differently.
+    // Do not rewrite them during restore repair.
+    if(state.statuses[d]==="recovery"){
+      continue;
+    }
+
     let vows = d===0 ? state.sundayVows : state.weekdayVows[d];
     let damage = state.damage[d];
 
     if(!vows || !damage) continue;
 
-    let anyVowChecked=vows.some(v=>v);
-    let anyDamageChecked=damage.some(v=>v);
-
-    if(!anyVowChecked && !anyDamageChecked) continue;
-
     let allVowsChecked=vows.every(v=>v);
+    let anyDamageChecked=damage.some(v=>v);
 
     if(allVowsChecked && !anyDamageChecked){
       state.statuses[d]="complete";
@@ -1572,6 +1607,7 @@ function repairWeeklyStatusesFromChecklist(){
     }
   }
 }
+
 function getVowStateForToday(){ return todayIndex===0 ? state.sundayVows : state.weekdayVows[todayIndex]; }
 function getPetImage(type){
   if(type==="king") return "king.png";
@@ -2283,6 +2319,83 @@ function toggleRecoveryDamage(i){
   showRecoveryCheck(scrollTop);
 }
 
+function showDamageDiagnosis(){
+  if(!requirePower()) return;
+  if(todayIndex<0){
+    showMain();
+    return;
+  }
+
+  stopPet();
+  stopFirework();
+
+  document.getElementById("statusBar").innerHTML="DIAGNOSIS";
+
+  let html="";
+  html+="<div class='panel'>";
+  html+="<div class='panel-title'>DAMAGE DIAGNOSIS</div>";
+  html+="<div class='scroll'>";
+  html+="<div class='small-note'>WHAT CAUSED THE BREAK?</div>";
+
+  html+="<div class='section-label'>PRIMARY FAILURE</div>";
+
+  for(let i=0;i<damageFailureTypes.length;i++){
+    html+="<div class='rule'>";
+    html+="<div class='box "+(state.damageFailure===i?"checked":"")+"' onclick='chooseDamageFailure("+i+")'></div>";
+    html+="<div>"+damageFailureTypes[i]+"</div>";
+    html+="</div>";
+  }
+
+  html+="<div class='section-label'>REPAIR STEP</div>";
+  html+="<div class='small-note'>WHAT CHANGES TOMORROW?</div>";
+
+  for(let i=0;i<damageRepairSteps.length;i++){
+    html+="<div class='rule'>";
+    html+="<div class='box "+(state.damageRepair===i?"checked":"")+"' onclick='chooseDamageRepair("+i+")'></div>";
+    html+="<div>"+damageRepairSteps[i]+"</div>";
+    html+="</div>";
+  }
+
+  html+="</div>";
+  html+="<div class='panel-buttons'>";
+  html+="<button class='mini-btn' onclick='showDamageProtocol()'>PROTOCOL</button>";
+  html+="<button class='mini-btn' onclick='showMain()'>BACK</button>";
+  html+="</div>";
+  html+="</div>";
+
+  document.getElementById("playArea").innerHTML=html;
+}
+
+function chooseDamageFailure(i){
+  if(!requirePower()) return;
+
+  if(state.damageFailure===i){
+    state.damageFailure=null;
+    play("reset");
+  }else{
+    state.damageFailure=i;
+    playDamageProtocolNote(i);
+  }
+
+  saveState();
+  showDamageDiagnosis();
+}
+
+function chooseDamageRepair(i){
+  if(!requirePower()) return;
+
+  if(state.damageRepair===i){
+    state.damageRepair=null;
+    play("reset");
+  }else{
+    state.damageRepair=i;
+    playDamageProtocolNote(i+damageFailureTypes.length);
+  }
+
+  saveState();
+  showDamageDiagnosis();
+}
+
 function showDamageProtocol(restoreScroll=null){
   if(!requirePower()) return;
   if(todayIndex<0){
@@ -2309,8 +2422,9 @@ function showDamageProtocol(restoreScroll=null){
 
   html+="</div>";
   html+="<div class='panel-buttons'>";
-  html+="<button class='mini-btn' onclick='showMain()'>BACK</button>";
-  html+="</div>";
+html+="<button class='mini-btn' onclick='showDamageDiagnosis()'>DIAGNOSE</button>";
+html+="<button class='mini-btn' onclick='showMain()'>BACK</button>";
+html+="</div>";
   html+="</div>";
 
   document.getElementById("playArea").innerHTML=html;
