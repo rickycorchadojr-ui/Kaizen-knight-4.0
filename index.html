@@ -323,7 +323,10 @@ transform:scaleX(-1);
 
 /* ── SCREEN STATE TRANSITION ─────────────────────────────── */
 .screen{
-  transition:background 0.3s ease;
+  position:relative;
+  overflow:hidden;
+  border-radius:8px;   /* match the inside display radius */
+  transition:background .3s ease;
 }
 
 /* ── PLAY AREA FADE-IN ───────────────────────────────────── */
@@ -971,7 +974,7 @@ const powerQuotes=[
   }
 ];
 
-const APP_VERSION="9.0.0";
+const APP_VERSION="9.0.1";
 const DEBUG_MODE=false;
 const days=["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"];
 let todayIndex=getTradingDayIndex();
